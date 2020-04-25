@@ -1,0 +1,61 @@
+import org.apache.spark.sql.{SQLContext, SaveMode}
+import org.apache.spark.sql.functions._
+import org.apache.spark.{SparkConf, SparkContext}
+
+
+object ReadCSVFile {
+  case class Rules(ServiceId: Integer, ServiceDesc: String, StartTime: Double, EndTime :Double, TotalVolume: Integer)
+  case class Segment(MobNo:Integer)
+  case class Data(Msisdn: Integer, ServiceIdentifier: Integer, TrafficVolume: String,TimeStamp:String)
+  def main(args : Array[String]): Unit = {
+    while (true){
+    var conf = new SparkConf().setAppName("Read CSV File").setMaster("local[*]")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+    System.setProperty("hadoop.home.dir", "C:\\hadoop")
+    val DataFiles = new java.io.File("E:\\ScalaProject\\Data").listFiles.filter(_.getName.startsWith("DATA_"))
+    val DataFilesRDD = DataFiles.toList
+
+    import sqlContext.implicits._
+    val RulesRDD = sc.textFile("E:\\ScalaProject\\Rules\\RULES.csv")
+    val SegmentRDD = sc.textFile("E:\\ScalaProject\\Segment\\SEGMENT.csv")
+    val DataRDD = sc.textFile(DataFilesRDD.mkString(","))
+    val Rules_Rdd = RulesRDD.map {
+      line =>val col = line.split(",")
+        Rules(col(0).toInt, col(1), col(2).toDouble, col(3).toDouble, col(4).toInt)
+    }
+    val Segment_RDD = SegmentRDD.map {
+      line =>val col = line.split(",")
+        Segment(col(0).toInt)
+    }
+    val Data_RDD = DataRDD.map {
+      line =>val col = line.split(",")
+        Data(col(0).toInt, col(1).toInt, col(2), col(3))
+    }
+    val RulesDF = Rules_Rdd.toDF()
+    //RulesDF.show()
+    val SegmentDF = Segment_RDD.toDF()
+    //SegmentDF.show()
+    val DataDF = Data_RDD.toDF()
+    //DataDF.show(100)
+    val joined_df = DataDF.join(SegmentDF, col("MobNo") === col("Msisdn"))
+    //joined_df.show()
+    val joined = joined_df.dropDuplicates("Msisdn")
+    //joined.show()
+    val OutputDF = joined.join(RulesDF, joined("ServiceIdentifier") === RulesDF("ServiceId") && joined("TrafficVolume") > RulesDF("TotalVolume")).
+     select(joined("Msisdn"),joined("ServiceIdentifier"),joined("TrafficVolume"), joined("TimeStamp"))
+    OutputDF.show()
+      OutputDF.coalesce(1).write.format("com.databricks.spark.csv").mode(SaveMode.Append).option("header", "false").save("C:\\Users\\Marim\\Desktop\\Output\\data.csv")
+
+  }
+} }
+//OutputDF.write.format("com.databricks.spark.csv").save("E:\\Scala Project\\Output")
+//OutputDF.write.csv("E:\\Scala Project\\Output")
+//OutputDF.coalesce(1).write.format("csv").option("header", "true").save("E:\\Scala Project\\Output\\data.csv")
+//OutputDF.coalesce(1).write.option("header", "true").csv("E:\\Scala Project\\Output\\data.csv")
+//OutputDF.write.format("csv").option("header","true").save("E:\\Scala Project\\Output")
+//OutputDF.rdd.map{ convertToReadableString }.saveAsTextFile("E:\\Scala Project\\Output\\data.csv")
+//OutputDF.coalesce(1).write.format("com.databricks.spark.csv").option("header", "true").save("E:\\Scala Project\\Output\\data.csv")
+//OutputDF.write.format("com.databricks.spark.csv").option("header", "true").save("data.csv")
+//OutputDF.coalesce(1).write.format("com.databricks.spark.csv").mode(SaveMode.Append).option("header", "false").save("C:\\Users\\Marim\\Desktop\\Output\\data.csv")
+// OutputDF.write.csv("/in/out")

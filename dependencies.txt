@@ -1,0 +1,21 @@
+//Team: El-Sayed Ibrahim & Mariam El Sherbiny
+
+name := "ScalaCommunicationProject"
+
+version := "0.1"
+
+scalaVersion := "2.11.12"
+val sparkVersion = "2.4.5"
+
+// https://mvnrepository.com/artifact/org.apache.spark/spark-core
+
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion
+)
+resolvers ++= Seq(
+  DefaultMavenRepository,
+  Resolver.bintrayRepo("typesafe", "releases"),
+  Resolver.sonatypeRepo("releases"),
+  Resolver.mavenLocal
+)
